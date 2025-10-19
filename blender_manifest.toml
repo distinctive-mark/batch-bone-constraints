@@ -1,0 +1,15 @@
+schema_version = "1.0.0"
+
+id = "batch_bone_constraints"
+version = "1.0.0"
+name = "Batch Bone Constraints"
+tagline = "Batch bone constraints for selected armatures targeting active's"
+maintainer = "distinctive-mark"
+
+type = "add-on"
+tags = ["Animation",]
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
