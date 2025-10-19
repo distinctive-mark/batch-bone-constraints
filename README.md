@@ -1,3 +1,6 @@
+![demo](Simple_demo.gif)
+
+
 # Batch Bone Constraints
 
 A Blender addon for batch creating and removing bone constraints between armatures with same bone names.
