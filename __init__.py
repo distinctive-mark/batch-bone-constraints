@@ -8,7 +8,7 @@ bl_info = {
     "blender": (4, 2, 0),
     "location": "3D Viewport > Header > Batch Bone Constraints",
     "description": "Batch create bone constraints for selected armatures targeting active armature's same bones",
-    "category": "Animation",
+    "category": "Rigging",
     "doc_url": "https://github.com/distinctive-mark/batch-bone-constraints",
     "tracker_url": "https://github.com/distinctive-mark/batch-bone-constraints/issues",
 }
