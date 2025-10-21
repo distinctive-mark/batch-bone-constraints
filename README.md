@@ -7,18 +7,10 @@ A Blender addon for batch creating and removing bone constraints between armatur
 
 ## Features
 
-- **Batch Add Constraints**: Add constraints to multiple armatures at once
-- **Multiple Constraint Types**: Support for Copy Location, Rotation, Scale, and Transforms constraints
-- **Smart Management**: Skip existing constraints to avoid duplicates
-- **Multi-language Support**: English and Chinese interface
-- **Non-destructive**: Preserves existing constraints and bone transformations
-
-## Supported Constraint Types
-
-- Copy Location
-- Copy Rotation  
-- Copy Scale
-- Copy Transforms
+- **Add** constraints to multiple armatures at once
+- **Support** for Copy Location, Rotation, Scale, and Transforms constraints
+- **Skip** existing constraints to avoid duplicates
+- **Preserves** existing constraints and bone transformations
 
 ## Usage
 
@@ -46,18 +38,13 @@ A Blender addon for batch creating and removing bone constraints between armatur
 ### Method 2: Manual Installation
 1. Download the ZIP file
 2. Open Blender > Edit > Preferences > Add-ons
-3. Click "Install..." and select the ZIP file
+3. Click "Install from Disk..." and select the ZIP file
 4. Enable the addon in the Animation category
 
 ## Requirements
 
-- Blender 3.0 or newer
+- Blender 4.2 or newer
 - Multiple armatures with matching bone names
-
-## Language Support
-
-- English (default)
-- 简体中文 (自动切换)
 
 ## License
 

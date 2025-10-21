@@ -4,7 +4,7 @@
 bl_info = {
     "name": "Batch Bone Constraints",
     "author": "distinctive-mark",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Header > Batch Bone Constraints",
     "description": "Batch create bone constraints for selected armatures targeting active armature's same bones",
@@ -17,78 +17,7 @@ import bpy
 from bpy.types import Operator, Menu, PropertyGroup
 from bpy.props import EnumProperty, BoolProperty, FloatProperty, PointerProperty
 
-# 翻译字典
-def get_translation_dict():
-    return {
-        "zh_CN": {
-            ("*", "Batch Bone Constraints"): "批骨约束",
-            ("*", "Batch create and remove bone constraints for selected armatures targeting bones with same names in active armature"): 
-                "为选中骨架批量创建和清除以活动骨架中同名骨骼为目标的约束",
-            ("*", "Batch Add Bone Constraints"): "批量添加骨骼约束",
-            ("*", "Add bone constraints to selected armatures targeting bones with same names in active armature"): 
-                "为选中骨架的骨骼添加约束到活动骨架的同名骨骼",
-            ("*", "Remove Bone Constraints"): "清除骨骼约束",
-            ("*", "Remove specified type of bone constraints from selected armatures"): 
-                "从选中骨架移除指定类型的骨骼约束",
-            ("*", "Remove Specific Constraints"): "清除特定约束",
-            ("*", "Remove constraints pointing to active armature"): 
-                "移除指向活动骨架的约束",
-            ("*", "Remove All Bone Constraints"): "清除所有骨骼约束",
-            ("*", "Constraint Type"): "约束类型",
-            ("*", "Select the constraint type to add"): "选择要添加的约束类型",
-            ("*", "Copy Location"): "复制位置",
-            ("*", "Copy Location Constraint"): "复制位置约束",
-            ("*", "Copy Rotation"): "复制旋转",
-            ("*", "Copy Rotation Constraint"): "复制旋转约束",
-            ("*", "Copy Scale"): "复制缩放",
-            ("*", "Copy Scale Constraint"): "复制缩放约束",
-            ("*", "Copy Transforms"): "复制变换",
-            ("*", "Copy Transforms Constraint"): "复制变换约束",
-            ("*", "Influence"): "影响",
-            ("*", "The influence of the constraint"): "约束的影响程度",
-            ("*", "Target"): "目标",
-            ("*", "The space in which the target is evaluated"): "目标物体的解算空间",
-            ("*", "Owner"): "拥有者",
-            ("*", "The space in which the owner is evaluated"): "主体的解算空间",
-            ("*", "World Space"): "世界空间",
-            ("*", "Local Space"): "局部空间",
-            ("*", "Local With Parent"): "局部带父系",
-            ("*", "Pose Space"): "姿态空间",
-            ("*", "Custom Space"): "自定义空间",
-            ("*", "Offset"): "偏移",
-            ("*", "offset"): "偏移",
-            ("*", "Mix Mode"): "混合模式",
-            ("*", "Replace"): "替换",
-            ("*", "Replace Original Transform"): "替换原始变换",
-            ("*", "Add"): "相加",
-            ("*", "Add to Original Transform"): "添加到原始变换",
-            ("*", "Before"): "之前",
-            ("*", "Apply Before Original Transform"): "在原始变换之前应用",
-            ("*", "After"): "之后",
-            ("*", "Apply After Original Transform"): "在原始变换之后应用",
-            ("*", "Power"): "乘方",
-            ("*", "Multiply the target scale obtained by the constraint object"): "将约束对象获得的目标比例做相乘处理",
-            ("*", "Basic Settings"): "基础设置",
-            ("*", "Location Constraint Settings"): "位置约束设置",
-            ("*", "Rotation Constraint Settings"): "旋转约束设置",
-            ("*", "Scale Constraint Settings"): "缩放约束设置",
-            ("*", "Transform Constraint Settings"): "变换约束设置",
-            ("*", "Axes"): "轴向",
-            ("*", "Invert"): "反转",
-            ("*", "All"): "全部",
-            ("*", "Remove all types of constraints"): "移除所有类型的约束",
-            ("*", "Please select at least one target armature"): "请至少选择一个目标骨架",
-            ("*", "Active object must be an armature"): "活动对象必须是一个骨架",
-            ("*", "Successfully added {0} constraints, skipped {1} existing constraints"): 
-                "成功添加 {0} 个约束，跳过 {1} 个已存在的约束",
-            ("*", "Removed {0} {1} constraints from {2} armatures"): 
-                "从 {2} 个骨架中移除了 {0} 个{1}约束",
-            ("*", "Removed {0} constraints pointing to active armature of type {1}"): 
-                "移除了 {0} 个指向活动骨架的{1}约束",
-        }
-    }
-
-# 约束类型枚举
+# 约束类型枚举 # Constraint type enum
 CONSTRAINT_TYPES = [
     ('COPY_LOCATION', "Copy Location", "Copy Location Constraint"),
     ('COPY_ROTATION', "Copy Rotation", "Copy Rotation Constraint"),
@@ -96,7 +25,7 @@ CONSTRAINT_TYPES = [
     ('COPY_TRANSFORMS', "Copy Transforms", "Copy Transforms Constraint"),
 ]
 
-# 空间变换枚举
+# 空间变换枚举 # Space transformation enum
 SPACE_TYPES = [
     ('WORLD', "World Space", "World Space"),
     ('LOCAL', "Local Space", "Local Space"), 
@@ -105,7 +34,7 @@ SPACE_TYPES = [
     ('CUSTOM', "Custom Space", "Custom Space"),
 ]
 
-# 混合模式枚举
+# 混合模式枚举 # Mix mode enum
 MIX_MODES = [
     ('REPLACE', "Replace", "Replace Original Transform"),
     ('ADD', "Add", "Add to Original Transform"),
@@ -115,10 +44,11 @@ MIX_MODES = [
 
 class BoneConstraintSettings(PropertyGroup):
     """骨骼约束设置属性组"""
+    """Bone Constraint Settings Property Group"""
     
-    # 基础设置
+    # 基础设置 # Basic settings
     constraint_type: EnumProperty(
-        name="Constraint Type",
+        name="Type",
         description="Select the constraint Type to add",
         items=CONSTRAINT_TYPES,
         default='COPY_ROTATION'
@@ -133,7 +63,7 @@ class BoneConstraintSettings(PropertyGroup):
         subtype='FACTOR'
     )
     
-    # 空间设置
+    # 空间设置 # Space settings
     target_space: EnumProperty(
         name="Target",
         description="The space in which the target is evaluated",
@@ -148,14 +78,14 @@ class BoneConstraintSettings(PropertyGroup):
         default='LOCAL'
     )
     
-    # 通用约束属性
+    # 通用约束属性 # General constraint properties
     use_offset: BoolProperty(
         name="Offset",
         description="offset",
         default=False
     )
     
-    # 位置约束属性
+    # 位置约束属性 # Location constraint properties
     use_x: BoolProperty(name="X", default=True)
     use_y: BoolProperty(name="Y", default=True)
     use_z: BoolProperty(name="Z", default=True)
@@ -163,14 +93,14 @@ class BoneConstraintSettings(PropertyGroup):
     invert_y: BoolProperty(name="Y", default=False)
     invert_z: BoolProperty(name="Z", default=False)
     
-    # 旋转约束属性
+    # 旋转约束属性 # Rotation constraint properties
     mix_mode: EnumProperty(
         name="Mix Mode",
         items=MIX_MODES,
         default='REPLACE'
     )
     
-    # 缩放约束属性
+    # 缩放约束属性 # Scale constraint properties
     power: FloatProperty(
         name="Power",
         description="Multiply the target scale obtained by the constraint object",
@@ -181,6 +111,7 @@ class BoneConstraintSettings(PropertyGroup):
 
 class ANIM_OT_add_bone_constraints(Operator):
     """为选中骨架添加骨骼约束"""
+    """Add bone constraints to selected armatures"""
     bl_idname = "anim.add_bone_constraints"
     bl_label = "Batch Add Bone Constraints"
     bl_description = "Add bone constraints to selected armatures targeting bones with same names in active armature"
@@ -199,23 +130,23 @@ class ANIM_OT_add_bone_constraints(Operator):
         layout = self.layout
         settings = context.scene.bone_constraint_settings
         
-        # 约束类型选择
+        # 约束类型选择 # Constraint type selection
         split = layout.split(factor=0.5)
-        split.label(text="Constraint Type")
+        split.label(text="Type")
         split.prop(settings, "constraint_type", text="")
         layout.separator()
         
-        # 基础设置
+        # 基础设置 # Basic settings
         layout.prop(settings, "influence")
         
-        # 空间设置
+        # 空间设置 # Space settings
         row = layout.row()
         row.prop(settings, "target_space")
         row.prop(settings, "owner_space")
         
         constraint_type = settings.constraint_type
         
-        # 约束特定设置    
+        # 约束特定设置 # Constraint-specific settings
         if constraint_type == 'COPY_LOCATION':
             self._draw_location_settings(layout, settings)
         elif constraint_type == 'COPY_ROTATION':
@@ -227,67 +158,71 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _draw_location_settings(self, layout, settings):
         """绘制位置约束设置"""
-        # 轴设置
+        """Draw location constraint settings"""
+        # 轴设置 # Axis settings
         row = layout.row()
-        row.label(text="Axes:")
+        row.label(text="Axis")
         sub = row.row(align=True)
         sub.prop(settings, "use_x", toggle=True)
         sub.prop(settings, "use_y", toggle=True)
         sub.prop(settings, "use_z", toggle=True)
     
-        # 反转设置
+        # 反转设置 # Invert settings
         row = layout.row()
-        row.label(text="Invert:")
+        row.label(text="Invert")
         sub = row.row(align=True)
         sub.prop(settings, "invert_x", toggle=True)
         sub.prop(settings, "invert_y", toggle=True)
         sub.prop(settings, "invert_z", toggle=True)
     
-        # 偏移设置
+        # 偏移设置 # Offset settings
         layout.prop(settings, "use_offset")
     
     def _draw_rotation_settings(self, layout, settings):
         """绘制旋转约束设置"""
-        # 轴设置
+        """Draw rotation constraint settings"""
+        # 轴设置 # Axis settings
         row = layout.row()
-        row.label(text="Axes:")
+        row.label(text="Axis")
         sub = row.row(align=True)
         sub.prop(settings, "use_x", toggle=True)
         sub.prop(settings, "use_y", toggle=True)
         sub.prop(settings, "use_z", toggle=True)
     
-        # 反转设置
+        # 反转设置 # Invert settings
         row = layout.row()
-        row.label(text="Invert:")
+        row.label(text="Invert")
         sub = row.row(align=True)
         sub.prop(settings, "invert_x", toggle=True)
         sub.prop(settings, "invert_y", toggle=True)
         sub.prop(settings, "invert_z", toggle=True)
     
-        # 混合模式
+        # 混合模式 # Mix mode
         layout.prop(settings, "mix_mode")
     
-        # 偏移设置
+        # 偏移设置 # Offset settings
         layout.prop(settings, "use_offset")
     
     def _draw_scale_settings(self, layout, settings):
         """绘制缩放约束设置"""
-        # 轴设置
+        """Draw scale constraint settings"""
+        # 轴设置 # Axis settings
         row = layout.row()
-        row.label(text="Axes:")
+        row.label(text="Axis")
         sub = row.row(align=True)
         sub.prop(settings, "use_x", toggle=True)
         sub.prop(settings, "use_y", toggle=True)
         sub.prop(settings, "use_z", toggle=True)
     
-        # 乘方设置
+        # 乘方设置 # Power settings
         layout.prop(settings, "power")
     
-        # 偏移设置
+        # 偏移设置 # Offset settings
         layout.prop(settings, "use_offset")
         
     def _draw_transform_settings(self, layout, settings):
         """绘制变换约束设置"""
+        """Draw transform constraint settings"""
         layout.prop(settings, "mix_mode")
     
     def execute(self, context):
@@ -325,6 +260,7 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _add_constraints_to_armature(self, source_armature, target_armature, constraint_type, settings):
         """为骨架添加约束"""
+        """Add constraints to armature"""
         constraints_added = 0
         skipped = 0
         
@@ -345,6 +281,7 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _has_existing_constraint(self, bone, constraint_type, target_armature, target_bone_name):
         """检查骨骼是否已经存在相同类型的约束"""
+        """Check if bone already has same type of constraint"""
         for constraint in bone.constraints:
             if (constraint.type == constraint_type and 
                 constraint.target == target_armature and
@@ -354,20 +291,21 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _add_single_constraint(self, bone, target_armature, target_bone_name, constraint_type, settings):
         """为单个骨骼添加约束"""
+        """Add single constraint to bone"""
         constraint = bone.constraints.new(type=constraint_type)
         constraint.target = target_armature
         constraint.subtarget = target_bone_name
         
-        # 设置基础属性
+        # 设置基础属性 # Set basic properties
         constraint.influence = settings.influence
         
-        # 设置空间属性
+        # 设置空间属性 # Set space properties
         if hasattr(constraint, 'target_space'):
             constraint.target_space = settings.target_space
         if hasattr(constraint, 'owner_space'):
             constraint.owner_space = settings.owner_space
         
-        # 设置约束特定属性
+        # 设置约束特定属性 # Set constraint-specific properties
         if constraint_type == 'COPY_LOCATION':
             self._setup_location_constraint(constraint, settings)
         elif constraint_type == 'COPY_ROTATION':
@@ -379,6 +317,7 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _setup_location_constraint(self, constraint, settings):
         """设置位置约束属性"""
+        """Setup location constraint properties"""
         constraint.use_x = settings.use_x
         constraint.use_y = settings.use_y
         constraint.use_z = settings.use_z
@@ -389,6 +328,7 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _setup_rotation_constraint(self, constraint, settings):
         """设置旋转约束属性"""
+        """Setup rotation constraint properties"""
         constraint.use_x = settings.use_x
         constraint.use_y = settings.use_y
         constraint.use_z = settings.use_z
@@ -400,6 +340,7 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _setup_scale_constraint(self, constraint, settings):
         """设置缩放约束属性"""
+        """Setup scale constraint properties"""
         constraint.use_x = settings.use_x
         constraint.use_y = settings.use_y
         constraint.use_z = settings.use_z
@@ -408,10 +349,12 @@ class ANIM_OT_add_bone_constraints(Operator):
     
     def _setup_transform_constraint(self, constraint, settings):
         """设置变换约束属性"""
+        """Setup transform constraint properties"""
         constraint.mix_mode = settings.mix_mode
 
 class ANIM_OT_remove_bone_constraints(Operator):
     """从选中骨架移除骨骼约束"""
+    """Remove bone constraints from selected armatures"""
     bl_idname = "anim.remove_bone_constraints"
     bl_label = "Remove Bone Constraints"
     bl_description = "Remove specified type of bone constraints from selected armatures"
@@ -457,6 +400,7 @@ class ANIM_OT_remove_bone_constraints(Operator):
     
     def _remove_constraints_from_armature(self, armature, constraint_type):
         """从骨架移除约束"""
+        """Remove constraints from armature"""
         constraints_removed = 0
         
         for bone in armature.pose.bones:
@@ -470,6 +414,7 @@ class ANIM_OT_remove_bone_constraints(Operator):
 
 class ANIM_OT_remove_specific_bone_constraints(Operator):
     """移除特定目标的骨骼约束"""
+    """Remove specific target bone constraints"""
     bl_idname = "anim.remove_specific_bone_constraints"
     bl_label = "Remove Specific Constraints"
     bl_description = "Remove constraints pointing to active armature"
@@ -520,6 +465,7 @@ class ANIM_OT_remove_specific_bone_constraints(Operator):
     
     def _remove_specific_constraints(self, armature, target_armature, constraint_type):
         """移除指向特定骨架的约束"""
+        """Remove constraints pointing to specific armature"""
         constraints_removed = 0
         
         for bone in armature.pose.bones:
@@ -534,6 +480,7 @@ class ANIM_OT_remove_specific_bone_constraints(Operator):
 
 class VIEW3D_MT_batch_constraint_menu(Menu):
     """批量骨骼约束菜单"""
+    """Batch Bone Constraints Menu"""
     bl_label = "Batch Bone Constraints"
     bl_idname = "VIEW3D_MT_batch_constraint_menu"
     
@@ -567,10 +514,11 @@ class VIEW3D_MT_batch_constraint_menu(Menu):
 
 def draw_batch_menu(self, context):
     """在标题栏绘制批骨约束菜单"""
+    """Draw batch bone constraints menu in header"""
     if context.active_object and context.active_object.type == 'ARMATURE':
         self.layout.menu("VIEW3D_MT_batch_constraint_menu", text="Batch Bone Constraints")
 
-# 类列表
+# 类列表 # Class list
 classes = (
     BoneConstraintSettings,
     ANIM_OT_add_bone_constraints,
@@ -580,31 +528,25 @@ classes = (
 )
 
 def register():
-    # 注册类
+    # 注册类 # Register classes
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    # 注册场景属性
+    # 注册场景属性 # Register scene properties
     bpy.types.Scene.bone_constraint_settings = PointerProperty(type=BoneConstraintSettings)
     
-    # 注册菜单
+    # 注册菜单 # Register menu
     bpy.types.VIEW3D_MT_editor_menus.append(draw_batch_menu)
-    
-    # 注册翻译
-    bpy.app.translations.register(__name__, get_translation_dict())
 
 def unregister():
-    # 注销翻译
-    bpy.app.translations.unregister(__name__)
-    
-    # 注销菜单
+    # 注销菜单 # Unregister menu
     bpy.types.VIEW3D_MT_editor_menus.remove(draw_batch_menu)
     
-    # 注销场景属性
+    # 注销场景属性 # Unregister scene properties
     if hasattr(bpy.types.Scene, 'bone_constraint_settings'):
         del bpy.types.Scene.bone_constraint_settings
     
-    # 注销类
+    # 注销类 # Unregister classes
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
