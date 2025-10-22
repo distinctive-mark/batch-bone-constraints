@@ -1,13 +1,13 @@
-schema_version = "1.0.1"
+schema_version = "1.0.0"
 
 id = "batch_bone_constraints"
-version = "1.0.1"
+version = "1.1.1"
 name = "Batch Bone Constraints"
-tagline = "Batch bone constraints for selected armatures targeting active's"
+tagline = "Batch bone constraints to the selected multiple armatures"
 maintainer = "distinctive-mark"
 
 type = "add-on"
-tags = ["Rigging",]
+tags = ["Rigging", "Animation"]
 blender_version_min = "4.2.0"
 
 license = [

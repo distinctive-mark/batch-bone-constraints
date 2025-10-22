@@ -1,50 +1,47 @@
-![demo](Simple_demo.gif)
-
-
 # Batch Bone Constraints
 
-A Blender addon for batch creating and removing bone constraints between armatures with same bone names.
+Batch bone constraints to the selected multiple armatures.
 
 ## Features
 
-- **Add** constraints to multiple armatures at once
-- **Support** for Copy Location, Rotation, Scale, and Transforms constraints
-- **Skip** existing constraints to avoid duplicates
-- **Preserves** existing constraints and bone transformations
+- **Six Operation Modes**:
+- **Imitate**: Add constraints targeting bones with same names in active armature
+- **Remove Imitate**: Remove constraints targeting bones with same names in active armature
+- **Copy**: Copy constraints from bones with same names in active armature
+- **Remove Copy**: Remove constraints matching those in active armature
+- **New**: Add new constraints to all bones in selected armatures
+- **Delete**: Remove constraints by type from all bones in selected armatures
 
-## Usage
+## Quick Start
 
-### Basic Workflow
+### Access Menu
+- Go to **3D Viewport > Header > Batch Bone Constraints**
+- Menu appears when armatures are active or selected
 
-1. Select the **target armature** (active object with the source bones)
-2. Select one or more **armatures** to add constraints to
-3. Click **"Batch Bone Constraints"** menu in 3D Viewport header
-4. Choose **"Batch Add Bone Constraints"**
-5. Configure constraint settings in the dialog
-6. Click **"Add Bone Constraints"** to apply
+### Basic Usage
+1. **Imitate Mode**: Select target armature (active) + other armatures → Choose constraint type
+2. **Copy Mode**: Select source armature (active with constraints) + other armatures → Choose constraint type
+3. **New Mode**: Select armatures → Choose constraint type to add
+4. **Delete Mode**: Select armatures → Choose constraint type to remove
 
-### Removing Constraints
+## Supported Constraints
 
-- **Remove Specific Constraints**: Remove constraints pointing to active armature
-- **Remove All Constraints**: Remove all constraints from selected armatures
+### Imitate Modes (4 types)
+- Copy Location, Copy Rotation, Copy Scale, Copy Transforms
+
+### Copy/New/Delete Modes (All types)
+- All Blender bone constraint types supported
 
 ## Installation
 
-### Method 1: Blender Extensions Platform (Recommended)
 1. Open Blender > Edit > Preferences > Extensions
 2. Search for "Batch Bone Constraints"
 3. Click Install
 
-### Method 2: Manual Installation
-1. Download the ZIP file
-2. Open Blender > Edit > Preferences > Add-ons
-3. Click "Install from Disk..." and select the ZIP file
-4. Enable the addon in the Animation category
-
 ## Requirements
 
-- Blender 4.2 or newer
-- Multiple armatures with matching bone names
+- Blender 4.2+
+- Multiple armatures with matching bone names (for Imitate/Copy modes)
 
 ## License
 
