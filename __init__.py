@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 deepseek
+# -*- coding: utf-8 -*-
 
 bl_info = {
     "name": "Batch Bone Constraints",
     "author": "distinctive-mark",
-    "version": (1, 1, 1),
+    "version": (1, 1, 2),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Header > Batch Bone Constraints",
     "description": "Batch bone constraints to the selected multiple armatures",
@@ -16,46 +17,51 @@ bl_info = {
 import bpy
 from bpy.types import Operator, Menu
 from bpy.props import EnumProperty
+from bpy.app.translations import pgettext_iface as iface_
+from bpy.app.translations import pgettext_tip as _
 
-# 约束类型定义 Constraint type definitions
+# Constraint type definitions
 IMITATE_CONSTRAINTS = [
-    ('COPY_LOCATION', "Copy Location", ""),
-    ('COPY_ROTATION', "Copy Rotation", ""),
-    ('COPY_SCALE', "Copy Scale", ""),
-    ('COPY_TRANSFORMS', "Copy Transforms", ""),
+    ('COPY_LOCATION', _("Copy Location"), ""),
+    ('COPY_ROTATION', _("Copy Rotation"), ""),
+    ('COPY_SCALE', _("Copy Scale"), ""),
+    ('COPY_TRANSFORMS', _("Copy Transforms"), ""),
 ]
 
 ALL_CONSTRAINTS = [
-    ('COPY_LOCATION', "Copy Location", ""),
-    ('COPY_ROTATION', "Copy Rotation", ""),
-    ('COPY_SCALE', "Copy Scale", ""),
-    ('COPY_TRANSFORMS', "Copy Transforms", ""),
-    ('DAMPED_TRACK', "Damped Track", ""),
-    ('TRACK_TO', "Track To", ""),
-    ('STRETCH_TO', "Stretch To", ""),
-    ('CLAMP_TO', "Clamp To", ""),
-    ('TRANSFORM', "Transform", ""),
-    ('SHRINKWRAP', "Shrinkwrap", ""),
-    ('LIMIT_LOCATION', "Limit Location", ""),
-    ('LIMIT_ROTATION', "Limit Rotation", ""),
-    ('LIMIT_SCALE', "Limit Scale", ""),
-    ('MAINTAIN_VOLUME', "Maintain Volume", ""),
-    ('ACTION', "Action", ""),
-    ('LOCKED_TRACK', "Locked Track", ""),
-    ('STRETCH_TO', "Stretch To", ""),
-    ('FLOOR', "Floor", ""),
-    ('FULLTRACK', "Full Track", ""),
-    ('RIGID_BODY_JOINT', "Rigid Body Joint", ""),
-    ('CHILD_OF', "Child Of", ""),
-    ('PIVOT', "Pivot", ""),
-    ('FOLLOW_PATH', "Follow Path", ""),
-    ('CAMERA_SOLVER', "Camera Solver", ""),
-    ('OBJECT_SOLVER', "Object Solver", ""),
-    ('ARMATURE', "Armature", ""),
-    ('SPLINE_IK', "Spline IK", ""),
+    ('COPY_LOCATION', _("Copy Location"), ""),
+    ('COPY_ROTATION', _("Copy Rotation"), ""),
+    ('COPY_SCALE', _("Copy Scale"), ""),
+    ('COPY_TRANSFORMS', _("Copy Transforms"), ""),
+    ('LIMIT_DISTANCE', _("Limit Distance"), ""),
+    ('LIMIT_LOCATION', _("Limit Location"), ""),
+    ('LIMIT_ROTATION', _("Limit Rotation"), ""),
+    ('LIMIT_SCALE', _("Limit Scale"), ""),
+    ('MAINTAIN_VOLUME', _("Maintain Volume"), ""),
+    ('TRANSFORMATION', _("Transformation"), ""),
+    ('TRANSFORM_CACHE', _("Transform Cache"), ""),
+
+    ('CLAMP_TO', _("Clamp To"), ""),
+    ('DAMPED_TRACK', _("Damped Track"), ""),
+    ('IK', _("Inverse Kinematics"), ""),
+    ('LOCKED_TRACK', _("Locked Track"), ""),
+    ('SPLINE_IK', _("Spline IK"), ""),
+    ('STRETCH_TO', _("Stretch To"), ""),
+    ('TRACK_TO', _("Track To"), ""),
+
+    ('ACTION', _("Action"), ""),
+    ('ARMATURE', _("Armature"), ""),
+    ('CHILD_OF', _("Child Of"), ""),
+    ('FLOOR', _("Floor"), ""),
+    ('FOLLOW_PATH', _("Follow Path"), ""),
+    ('PIVOT', _("Pivot"), ""),
+    ('SHRINKWRAP', _("Shrinkwrap"), ""),
+
+    ('CAMERA_SOLVER', _("Camera Solver"), ""),
+    ('FOLLOW_TRACK', _("Follow Track"), ""),
+    ('OBJECT_SOLVER', _("Object Solver"), ""),
 ]
 
-# 在 ALL_CONSTRAINTS 定义后添加以下代码
 
 def get_available_constraint_types(context, mode):
     """获取可用约束类型"""
@@ -68,49 +74,55 @@ def get_available_constraint_types(context, mode):
         return available_types
     
     if mode == 'IMITATE':
-        # 模仿模式：检查活动项和选中项是否有同名骨骼/顶点组
+        # Imitate mode: Check if active and selected items have bones/vertex groups with same names
         if active_obj:
             for target_obj in selected_objs:
                 if target_obj == active_obj:
                     continue
                 if active_obj.type == 'ARMATURE':
-                    # 活动项是骨架：检查同名骨骼
+                    # Active object is armature: Check for bones with same names
                     active_bone_names = {bone.name for bone in active_obj.pose.bones}
                     target_bone_names = {bone.name for bone in target_obj.pose.bones}
-                    if active_bone_names & target_bone_names:  # 有交集
-                        # 总是显示4种变换约束
+                    if active_bone_names & target_bone_names:  # 有交集 Has intersection
+                        # Always show 4 transform constraints
                         available_types.update(['COPY_LOCATION', 'COPY_ROTATION', 'COPY_SCALE', 'COPY_TRANSFORMS'])
                         break
                 elif active_obj.type == 'MESH':
-                    # 活动项是网格：检查同名顶点组
+                    # Active object is mesh: Check for vertex groups with same names
                     active_vgroup_names = {vg.name for vg in active_obj.vertex_groups}
                     target_bone_names = {bone.name for bone in target_obj.pose.bones}
-                    if active_vgroup_names & target_bone_names:  # 有交集
-                        # 总是显示4种变换约束
+                    if active_vgroup_names & target_bone_names:  # Has intersection
+                        # Always show 4 transform constraints
                         available_types.update(['COPY_LOCATION', 'COPY_ROTATION', 'COPY_SCALE', 'COPY_TRANSFORMS'])
                         break
     
     elif mode == 'REMOVE_IMITATE':
-        # 移除模仿模式：检查选中项中已有的以活动项为目标的约束
+        # Remove imitate mode: Check for existing constraints targeting active object in selected items
         if active_obj:
             for target_obj in selected_objs:
                 if target_obj == active_obj:
                     continue
                 for bone in target_obj.pose.bones:
                     for constraint in bone.constraints:
-                        # 检查约束是否以活动项为目标
-                        if (constraint.target == active_obj and 
-                            constraint.type in ['COPY_LOCATION', 'COPY_ROTATION', 'COPY_SCALE', 'COPY_TRANSFORMS']):
-                            # 检查是否有同名骨骼/顶点组
+                        # Only check four transform constraints
+                        if constraint.type in ['COPY_LOCATION', 'COPY_ROTATION', 'COPY_SCALE', 'COPY_TRANSFORMS']:
+                            # Check if there are bones/vertex groups with same names
+                            name_match = False
                             if active_obj.type == 'ARMATURE':
                                 if bone.name in active_obj.pose.bones:
-                                    available_types.add(constraint.type)
+                                    name_match = True
                             elif active_obj.type == 'MESH':
                                 if bone.name in active_obj.vertex_groups:
+                                    name_match = True
+                            
+                            if name_match:
+                                # Check if constraint targets active object and subtarget is current bone name
+                                if (hasattr(constraint, 'target') and constraint.target == active_obj and
+                                    hasattr(constraint, 'subtarget') and constraint.subtarget == bone.name):
                                     available_types.add(constraint.type)
     
     elif mode == 'COPY':
-        # 复制模式：检查活动项有而选中项没有的约束（针对同名骨骼）
+        # Copy mode: Check for constraints in active object that are missing in selected objects (for bones with same names)
         if active_obj and active_obj.type == 'ARMATURE':
             for target_obj in selected_objs:
                 if target_obj == active_obj:
@@ -119,17 +131,52 @@ def get_available_constraint_types(context, mode):
                     if active_bone.name in target_obj.pose.bones:
                         target_bone = target_obj.pose.bones[active_bone.name]
                         for constraint in active_bone.constraints:
-                            # 检查目标骨骼是否还没有相同的约束
-                            if not any(
-                                c.type == constraint.type and 
-                                c.target == constraint.target and 
-                                getattr(c, 'subtarget', '') == getattr(constraint, 'subtarget', '')
-                                for c in target_bone.constraints
-                            ):
+                            # Check if target bone doesn't have the same constraint yet
+                            constraint_exists = False
+                            
+                            for target_constraint in target_bone.constraints:
+                                if target_constraint.type == constraint.type:
+                                    # Check if all properties match
+                                    properties_match = True
+                                    
+                                    # Check all properties (exclude some unimportant ones)
+                                    exclude_props = {'rna_type', 'type', 'name', 'is_valid', 'error_message'}
+                                    
+                                    for prop in dir(constraint):
+                                        if (not prop.startswith('_') and 
+                                            not prop.startswith('bl_') and
+                                            prop not in exclude_props and
+                                            not callable(getattr(constraint, prop))):
+                                            
+                                            try:
+                                                constraint_val = getattr(constraint, prop)
+                                                target_val = getattr(target_constraint, prop)
+                                                
+                                                # Special treatment: None and empty strings are considered equal
+                                                if constraint_val is None and target_val is None:
+                                                    continue
+                                                if constraint_val == '' and target_val == '':
+                                                    continue
+                                                if constraint_val == target_val:
+                                                    continue
+                                                    
+                                                # Values ​​do not match
+                                                properties_match = False
+                                                break
+                                                
+                                            except (AttributeError, TypeError):
+                                                # If an attribute exists in one constraint but not in another, it is not considered a mismatch
+                                                pass
+                                    
+                                    if properties_match:
+                                        constraint_exists = True
+                                        break
+                            
+                            if not constraint_exists:
                                 available_types.add(constraint.type)
     
     elif mode == 'REMOVE_COPY':
-        # 移除复制模式：检查活动项和选中项有相同约束（针对同名骨骼）
+        # Remove copy mode: Check for same constraints in both active and selected objects (for bones with same names)
         if active_obj and active_obj.type == 'ARMATURE':
             for target_obj in selected_objs:
                 if target_obj == active_obj:
@@ -138,17 +185,46 @@ def get_available_constraint_types(context, mode):
                     if active_bone.name in target_obj.pose.bones:
                         target_bone = target_obj.pose.bones[active_bone.name]
                         for constraint in active_bone.constraints:
-                            # 检查目标骨骼是否有相同的约束
-                            if any(
-                                c.type == constraint.type and 
-                                c.target == constraint.target and 
-                                getattr(c, 'subtarget', '') == getattr(constraint, 'subtarget', '')
-                                for c in target_bone.constraints
-                            ):
-                                available_types.add(constraint.type)
+                            # Check if target bone has the same constraint
+                            for target_constraint in target_bone.constraints:
+                                if target_constraint.type == constraint.type:
+                                    match = True
+                                    
+                                    # Check all properties (exclude some unimportant ones)
+                                    exclude_props = {'rna_type', 'type', 'name', 'is_valid', 'error_message'}
+                                    
+                                    for prop in dir(constraint):
+                                        if (not prop.startswith('_') and 
+                                            not prop.startswith('bl_') and
+                                            prop not in exclude_props and
+                                            not callable(getattr(constraint, prop))):
+                                            
+                                            try:
+                                                constraint_val = getattr(constraint, prop)
+                                                target_val = getattr(target_constraint, prop)
+                                                
+                                                # Special treatment: None and empty strings are considered equal
+                                                if constraint_val is None and target_val is None:
+                                                    continue
+                                                if constraint_val == '' and target_val == '':
+                                                    continue
+                                                if constraint_val == target_val:
+                                                    continue
+                                                    
+                                                # Values ​​do not match
+                                                match = False
+                                                break
+                                                
+                                            except (AttributeError, TypeError):
+                                                # If an attribute exists in one constraint but not in another, it is not considered a mismatch
+                                                pass
+                                    
+                                    if match:
+                                        available_types.add(constraint.type)
+                                        break  # When a match is found, break out of the inner loop
     
     elif mode == 'DELETE':
-        # 删除模式：检查所有选中骨架的约束（包括活动项）
+        # Delete mode: Check constraints in all selected armatures (including active object)
         for obj in selected_objs:
             for bone in obj.pose.bones:
                 for constraint in bone.constraints:
@@ -156,38 +232,43 @@ def get_available_constraint_types(context, mode):
     
     return available_types
 
-# 约束类型图标映射
+# Constraint type icon mapping
 CONSTRAINT_ICONS = {
     'COPY_LOCATION': 'CON_LOCLIKE',
     'COPY_ROTATION': 'CON_ROTLIKE',
     'COPY_SCALE': 'CON_SIZELIKE',
-    'COPY_TRANSFORMS': 'CON_TRANSFORM',
+    'COPY_TRANSFORMS': 'CON_TRANSLIKE',
+    'LIMIT_DISTANCE': 'CON_DISTLIMIT',
     'LIMIT_LOCATION': 'CON_LOCLIMIT',
     'LIMIT_ROTATION': 'CON_ROTLIMIT',
     'LIMIT_SCALE': 'CON_SIZELIMIT',
-    'DAMPED_TRACK': 'CON_TRACKTO',
-    'TRACK_TO': 'CON_TRACKTO',
-    'STRETCH_TO': 'CON_STRETCHTO',
-    'CLAMP_TO': 'CON_CLAMPTO',
-    'TRANSFORM': 'CON_TRANSFORM',
-    'SHRINKWRAP': 'CON_SHRINKWRAP',
     'MAINTAIN_VOLUME': 'CON_SAMEVOL',
-    'ACTION': 'CON_ACTION',
+    'TRANSFORMATION': 'CON_TRANSFORM',
+    'TRANSFORM_CACHE': 'CON_TRANSFORM_CACHE',
+
+    'CLAMP_TO': 'CON_CLAMPTO',
+    'DAMPED_TRACK': 'CON_TRACKTO',
+    'IK': 'CON_KINEMATIC',
     'LOCKED_TRACK': 'CON_LOCKTRACK',
-    'FLOOR': 'CON_FLOOR',
-    'FULLTRACK': 'CON_FOLLOWPATH',
-    'RIGID_BODY_JOINT': 'CON_ROTLIKE',
-    'CHILD_OF': 'CON_CHILDOF',
-    'PIVOT': 'CON_PIVOT',
-    'FOLLOW_PATH': 'CON_FOLLOWPATH',
-    'CAMERA_SOLVER': 'CON_CAMERASOLVER',
-    'OBJECT_SOLVER': 'CON_OBJECTSOLVER',
-    'ARMATURE': 'CON_ARMATURE',
     'SPLINE_IK': 'CON_SPLINEIK',
+    'STRETCH_TO': 'CON_STRETCHTO',
+    'TRACK_TO': 'CON_TRACKTO',
+
+    'ACTION': 'CON_ACTION',
+    'ARMATURE': 'CON_ARMATURE',
+    'CHILD_OF': 'CON_CHILDOF',
+    'FLOOR': 'CON_FLOOR',
+    'FOLLOW_PATH': 'CON_FOLLOWPATH',
+    'PIVOT': 'CON_PIVOT',
+    'SHRINKWRAP': 'CON_SHRINKWRAP',
+
+    'CAMERA_SOLVER': 'CON_CAMERASOLVER',
+    'FOLLOW_TRACK': 'CON_FOLLOWTRACK',
+    'OBJECT_SOLVER': 'CON_OBJECTSOLVER',
 }
 
 def get_constraint_icon(constraint_type):
-    """获取约束类型图标"""
+    """Get constraint type icon"""
     return CONSTRAINT_ICONS.get(constraint_type, 'CONSTRAINT')
 
 class ANIM_OT_batch_imitate(Operator):
@@ -210,11 +291,11 @@ class ANIM_OT_batch_imitate(Operator):
         if not active_obj:
             cls.poll_message_set("No active object")
             return False
-        # 活动项可以是骨架或网格 Active object can be armature or mesh
+        # Active object can be armature or mesh
         if active_obj.type not in {'ARMATURE', 'MESH'}:
             cls.poll_message_set("Active object must be armature or mesh")
             return False
-        # 至少有一个选中的骨架 At least one selected armature
+        # At least one selected armature
         selected_armatures = [obj for obj in context.selected_objects 
                             if obj.type == 'ARMATURE' and obj != active_obj]
         if not selected_armatures:
@@ -231,13 +312,13 @@ class ANIM_OT_batch_imitate(Operator):
         
         for target_armature in target_armatures:
             for target_bone in target_armature.pose.bones:
-                # 检查是否已存在相同约束 Check if same constraint already exists
+                # Check if same constraint already exists
                 existing = any(c.type == self.constraint_type and 
                              c.target == active_obj and 
                              c.subtarget == target_bone.name 
                              for c in target_bone.constraints)
                 if not existing:
-                    # 使用Blender内置方法创建约束 Use Blender's built-in method to create constraints
+                    # Use Blender's built-in method to create constraints
                     constraint = target_bone.constraints.new(type=self.constraint_type)
                     constraint.target = active_obj
                     constraint.subtarget = target_bone.name
@@ -311,7 +392,7 @@ class ANIM_OT_batch_copy(Operator):
             cls.poll_message_set("Active object must be an armature")
             return False
         
-        # 检查活动骨架是否有约束 Check if active armature has constraints
+        # Check if active armature has constraints
         has_constraints = any(len(bone.constraints) > 0 
                             for bone in active_obj.pose.bones)
         if not has_constraints:
@@ -342,23 +423,44 @@ class ANIM_OT_batch_copy(Operator):
                         if (self.constraint_type == 'ALL' or 
                             source_constraint.type == self.constraint_type):
                             
-                            # 使用Blender内置方法复制约束 Use Blender's built-in method to copy constraints
-                            new_constraint = target_bone.constraints.new(
-                                type=source_constraint.type
-                            )
+                            # Check if the same constraint already exists
+                            constraint_exists = False
+                            for target_constraint in target_bone.constraints:
+                                if target_constraint.type == source_constraint.type:
+                                    # Simple check if key attributes match
+                                    properties_match = True
+                                    if hasattr(source_constraint, 'target') and hasattr(target_constraint, 'target'):
+                                        if source_constraint.target != target_constraint.target:
+                                            properties_match = False
+                                    if hasattr(source_constraint, 'subtarget') and hasattr(target_constraint, 'subtarget'):
+                                        if source_constraint.subtarget != target_constraint.subtarget:
+                                            properties_match = False
+                                    if properties_match:
+                                        constraint_exists = True
+                                        break
                             
-                            # 复制所有属性 Copy all properties
-                            for prop in dir(source_constraint):
-                                if (not prop.startswith('_') and 
-                                    not prop.startswith('bl_') and
-                                    prop not in ['rna_type', 'type', 'name']):
-                                    try:
-                                        setattr(new_constraint, prop, 
-                                               getattr(source_constraint, prop))
-                                    except (AttributeError, TypeError):
-                                        pass
-                            
-                            total_copied += 1
+                            if not constraint_exists:
+                                # Copy constraints using blender built-in methods
+                                new_constraint = target_bone.constraints.new(
+                                    type=source_constraint.type
+                                )
+                                
+                                # Copy all properties
+                                exclude_props = {'rna_type', 'type', 'name', 'is_valid', 'error_message'}
+                                
+                                for prop in dir(source_constraint):
+                                    if (not prop.startswith('_') and 
+                                        not prop.startswith('bl_') and
+                                        prop not in exclude_props and
+                                        not callable(getattr(source_constraint, prop))):
+                                        try:
+                                            setattr(new_constraint, prop, 
+                                                   getattr(source_constraint, prop))
+                                        except (AttributeError, TypeError):
+                                            # Ignore properties that cannot be set
+                                            pass
+                                
+                                total_copied += 1
         
         self.report({'INFO'}, f"Copied {total_copied} constraints")
         return {'FINISHED'}
@@ -401,14 +503,53 @@ class ANIM_OT_remove_copy(Operator):
             for target_bone in target_armature.pose.bones:
                 if target_bone.name in active_obj.pose.bones:
                     source_bone = active_obj.pose.bones[target_bone.name]
-                    source_constraint_types = [c.type for c in source_bone.constraints]
                     
-                    for constraint in list(target_bone.constraints):
-                        if (constraint.type in source_constraint_types and
-                            (self.constraint_type == 'ALL' or 
-                             constraint.type == self.constraint_type)):
-                            target_bone.constraints.remove(constraint)
-                            total_removed += 1
+                    # Check each constraint of the target bone
+                    for target_constraint in list(target_bone.constraints):
+                        # If a constraint type is specified, checks for a match
+                        if (self.constraint_type != 'ALL' and 
+                            target_constraint.type != self.constraint_type):
+                            continue
+                            
+                        # Find constraints of the same type with matching properties in the source skeleton
+                        for source_constraint in source_bone.constraints:
+                            if source_constraint.type == target_constraint.type:
+                                # Check if all properties match
+                                properties_match = True
+                                exclude_props = {'rna_type', 'type', 'name', 'is_valid', 'error_message'}
+                                
+                                for prop in dir(source_constraint):
+                                    if (not prop.startswith('_') and 
+                                        not prop.startswith('bl_') and
+                                        prop not in exclude_props and
+                                        not callable(getattr(source_constraint, prop))):
+                                        
+                                        try:
+                                            source_val = getattr(source_constraint, prop)
+                                            target_val = getattr(target_constraint, prop)
+                                            
+                                            # Special treatment: None and empty strings are considered equal
+                                            if source_val is None and target_val is None:
+                                                continue
+                                            if source_val == '' and target_val == '':
+                                                continue
+                                            if source_val == target_val:
+                                                continue
+                                                
+                                            # Values ​​do not match
+                                            properties_match = False
+                                            break
+                                            
+                                        except (AttributeError, TypeError):
+                                            # If an attribute exists in one constraint but not in another, it is considered a mismatch
+                                            properties_match = False
+                                            break
+                                
+                                # If a constraint with an exact matching attribute is found, delete the target constraint
+                                if properties_match:
+                                    target_bone.constraints.remove(target_constraint)
+                                    total_removed += 1
+                                    break  # After deletion, jump out of the inner loop and continue to check the next target constraint.
         
         self.report({'INFO'}, f"Removed {total_removed} copied constraints")
         return {'FINISHED'}
@@ -439,7 +580,7 @@ class ANIM_OT_batch_new(Operator):
         
         for armature in selected_armatures:
             for bone in armature.pose.bones:
-                # 使用Blender内置方法创建约束 Use Blender's built-in method to create constraints
+                # Use Blender's built-in method to create constraints
                 bone.constraints.new(type=self.constraint_type)
                 total_added += 1
         
@@ -482,17 +623,20 @@ class ANIM_OT_batch_delete(Operator):
         self.report({'INFO'}, f"Removed {total_removed} {type_name} constraints")
         return {'FINISHED'}
 
-# 菜单定义
+# Menu definitions
 class VIEW3D_MT_batch_constraints_menu(Menu):
-    bl_label = "Batch Bone Constraints"
+    bl_label = _("Batch Bone Constraints")
     bl_idname = "VIEW3D_MT_batch_constraints_menu"
     
     @classmethod
     def poll(cls, context):
-        # 检查活动对象或选中对象中是否有骨架 Check if active object or selected objects include armatures
+        # Check if it is in object mode
+        if context.mode != 'OBJECT':
+            return False
+        # Check if active object or selected objects include armatures
         if context.active_object and context.active_object.type == 'ARMATURE':
             return True
-        # 检查选中对象中是否有骨架 Check if selected objects include armatures
+        # Check if selected objects include armatures
         selected_armatures = [obj for obj in context.selected_objects 
                             if obj.type == 'ARMATURE']
         return len(selected_armatures) >= 1
@@ -507,7 +651,7 @@ class VIEW3D_MT_batch_constraints_menu(Menu):
         layout.menu("VIEW3D_MT_delete_menu", icon='TRASH')
 
 class VIEW3D_MT_imitate_menu(Menu):
-    bl_label = "Imitate"
+    bl_label = _("Imitate")
     bl_idname = "VIEW3D_MT_imitate_menu"
     
     def draw(self, context):
@@ -515,7 +659,7 @@ class VIEW3D_MT_imitate_menu(Menu):
         available_types = get_available_constraint_types(context, 'IMITATE')
         
         if not available_types:
-            # 没有可用项时显示提示
+            # Show hint when no options available
             layout.label(text="No options available", icon='INFO')
             return
         
@@ -525,7 +669,7 @@ class VIEW3D_MT_imitate_menu(Menu):
             op.constraint_type = constraint_type[0]
 
 class VIEW3D_MT_remove_imitate_menu(Menu):
-    bl_label = "Remove Imitate"
+    bl_label = _("Remove Imitate")
     bl_idname = "VIEW3D_MT_remove_imitate_menu"
     
     def draw(self, context):
@@ -533,11 +677,11 @@ class VIEW3D_MT_remove_imitate_menu(Menu):
         available_types = get_available_constraint_types(context, 'REMOVE_IMITATE')
         
         if not available_types:
-            # 没有可用项时显示提示
+            # Show hint when no options available
             layout.label(text="No options available", icon='INFO')
             return
         
-        # 只有当可用类型大于1时才显示"All"选项
+        # Only show "All" option when available types are more than 1
         if len(available_types) >1:
             op = layout.operator("anim.remove_imitate", text="All", icon='X')
             op.constraint_type = 'ALL'
@@ -550,7 +694,7 @@ class VIEW3D_MT_remove_imitate_menu(Menu):
                 op.constraint_type = constraint_type[0]
 
 class VIEW3D_MT_copy_menu(Menu):
-    bl_label = "Copy"
+    bl_label = _("Copy")
     bl_idname = "VIEW3D_MT_copy_menu"
     
     def draw(self, context):
@@ -558,11 +702,11 @@ class VIEW3D_MT_copy_menu(Menu):
         available_types = get_available_constraint_types(context, 'COPY')
         
         if not available_types:
-            # 没有可用项时显示提示
+            # Show hint when no options available
             layout.label(text="No options available", icon='INFO')
             return
         
-        # 只有当可用类型大于1时才显示"All"选项
+        # Only show "All" option when available types are more than 1
         if len(available_types) >1:
             op = layout.operator("anim.batch_copy", text="All", icon='DUPLICATE')
             op.constraint_type = 'ALL'
@@ -575,7 +719,7 @@ class VIEW3D_MT_copy_menu(Menu):
                 op.constraint_type = constraint_type[0]
 
 class VIEW3D_MT_remove_copy_menu(Menu):
-    bl_label = "Remove Copy"
+    bl_label = _("Remove Copy")
     bl_idname = "VIEW3D_MT_remove_copy_menu"
     
     def draw(self, context):
@@ -583,11 +727,11 @@ class VIEW3D_MT_remove_copy_menu(Menu):
         available_types = get_available_constraint_types(context, 'REMOVE_COPY')
         
         if not available_types:
-            # 没有可用项时显示提示
+            # Show hint when no options available
             layout.label(text="No options available", icon='INFO')
             return
         
-        # 只有当可用类型大于1时才显示"All"选项
+        # Only show "All" option when available types are more than 1
         if len(available_types) >1:
             op = layout.operator("anim.remove_copy", text="All", icon='X')
             op.constraint_type = 'ALL'
@@ -600,19 +744,19 @@ class VIEW3D_MT_remove_copy_menu(Menu):
                 op.constraint_type = constraint_type[0]
 
 class VIEW3D_MT_new_menu(Menu):
-    bl_label = "New"
+    bl_label = _("New")
     bl_idname = "VIEW3D_MT_new_menu"
     
     def draw(self, context):
         layout = self.layout
-        # 新建模式显示所有约束类型
+        # Show hint when no options available
         for constraint_type in ALL_CONSTRAINTS:
             icon = get_constraint_icon(constraint_type[0])
             op = layout.operator("anim.batch_new", text=constraint_type[1], icon=icon)
             op.constraint_type = constraint_type[0]
 
 class VIEW3D_MT_delete_menu(Menu):
-    bl_label = "Delete"
+    bl_label = _("Delete")
     bl_idname = "VIEW3D_MT_delete_menu"
     
     def draw(self, context):
@@ -620,11 +764,11 @@ class VIEW3D_MT_delete_menu(Menu):
         available_types = get_available_constraint_types(context, 'DELETE')
         
         if not available_types:
-            # 没有可用项时显示提示
+            # Show hint when no options available
             layout.label(text="No options available", icon='INFO')
             return
         
-        # 只有当可用类型大于1时才显示"All"选项
+        # Only show "All" option when available types are more than 1
         if len(available_types) >1:
             op = layout.operator("anim.batch_delete", text="All", icon='X')
             op.constraint_type = 'ALL'
@@ -637,8 +781,8 @@ class VIEW3D_MT_delete_menu(Menu):
                 op.constraint_type = constraint_type[0]
 
 def menu_func(self, context):
-    # 只在活动项或选中项中有骨架时才显示菜单 Only show menu when active or selected objects include armatures
-    if (context.active_object and context.active_object.type == 'ARMATURE') or \
+    # Only show menu when active or selected objects include armatures
+    if context.mode == 'OBJECT' and (context.active_object and context.active_object.type == 'ARMATURE') or \
        any(obj.type == 'ARMATURE' for obj in context.selected_objects):
         self.layout.menu("VIEW3D_MT_batch_constraints_menu")
 

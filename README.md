@@ -1,4 +1,4 @@
-![Batch Bone Constraints](Featured%20image.png)
+![Batch Bone Constraints](Featured_image.png)
 
 # Batch Bone Constraints
 
