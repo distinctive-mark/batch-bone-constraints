@@ -7,32 +7,31 @@ Batch bone constraints to the selected multiple armatures.
 ## Features
 
 - **Six Operation Modes**:
-- **Imitate**: Add constraints targeting bones with same names in active armature
-- **Remove Imitate**: Remove constraints targeting bones with same names in active armature
-- **Copy**: Copy constraints from bones with same names in active armature
-- **Remove Copy**: Remove constraints matching those in active armature
-- **New**: Add new constraints to all bones in selected armatures
-- **Delete**: Remove constraints by type from all bones in selected armatures
+  - **Imitate**: Add constraints targeting bones with same names in active object (Object mode)
+  - **Remove Imitate**: Remove constraints targeting bones with same names in active object (Object mode)
+  - **Copy**: Copy constraints from bones with same names in active armature (Object mode)
+  - **Remove Copy**: Remove constraints matching those in active armature (Object mode)
+  - **New**: Add new constraints to all bones (Object mode) or selected bones (Pose mode)
+  - **Delete**: Remove constraints by type, including invalid constraints (Object & Pose modes)
 
 ## Quick Start
 
 ### Access Menu
 - Go to **3D Viewport > Header > Batch Bone Constraints**
-- Menu appears when armatures are active or selected
+- Menu appears when armatures are active or selected in Object or Pose mode
 
 ### Basic Usage
-1. **Imitate Mode**: Select target armature (active) + other armatures → Choose constraint type
-2. **Copy Mode**: Select source armature (active with constraints) + other armatures → Choose constraint type
-3. **New Mode**: Select armatures → Choose constraint type to add
-4. **Delete Mode**: Select armatures → Choose constraint type to remove
+1. **Object Mode**: Select target armature(s) → Choose operation and constraint type
+2. **Pose Mode**: Select bones in active armature → Choose New or Delete operation
+3. **Imitate Mode**: Select active armature/mesh + other armatures → Choose constraint type
 
 ## Supported Constraints
 
 ### Imitate Modes (4 types)
 - Copy Location, Copy Rotation, Copy Scale, Copy Transforms
 
-### Copy/New/Delete Modes (All types)
-- All Blender bone constraint types supported
+### All Other Modes
+- All Blender bone constraint types, including invalid constraint detection
 
 ## Installation
 

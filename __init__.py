@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Batch Bone Constraints",
     "author": "distinctive-mark",
-    "version": (1, 1, 2),
+    "version": (1, 1, 3),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Header > Batch Bone Constraints",
     "description": "Batch bone constraints to the selected multiple armatures",
@@ -60,6 +60,7 @@ ALL_CONSTRAINTS = [
     ('CAMERA_SOLVER', _("Camera Solver"), ""),
     ('FOLLOW_TRACK', _("Follow Track"), ""),
     ('OBJECT_SOLVER', _("Object Solver"), ""),
+    ('INVALID', _("Invalid"), ""),
 ]
 
 
@@ -83,7 +84,7 @@ def get_available_constraint_types(context, mode):
                     # Active object is armature: Check for bones with same names
                     active_bone_names = {bone.name for bone in active_obj.pose.bones}
                     target_bone_names = {bone.name for bone in target_obj.pose.bones}
-                    if active_bone_names & target_bone_names:  # 有交集 Has intersection
+                    if active_bone_names & target_bone_names:  # Has intersection
                         # Always show 4 transform constraints
                         available_types.update(['COPY_LOCATION', 'COPY_ROTATION', 'COPY_SCALE', 'COPY_TRANSFORMS'])
                         break
@@ -224,11 +225,24 @@ def get_available_constraint_types(context, mode):
                                         break  # When a match is found, break out of the inner loop
     
     elif mode == 'DELETE':
-        # Delete mode: Check constraints in all selected armatures (including active object)
-        for obj in selected_objs:
-            for bone in obj.pose.bones:
+        # Delete mode: Check constraints in selected bones (Pose Mode) or all bones (Object Mode)
+        if context.mode == 'POSE' and context.active_object and context.active_object.type == 'ARMATURE':
+            # In Pose Mode: Check only selected bones
+            for bone in context.selected_pose_bones:
                 for constraint in bone.constraints:
                     available_types.add(constraint.type)
+                    # Check if constraint is invalid
+                    if not constraint.is_valid:
+                        available_types.add('INVALID')
+        else:
+            # In Object Mode: Check all bones in selected armatures
+            for obj in selected_objs:
+                for bone in obj.pose.bones:
+                    for constraint in bone.constraints:
+                        available_types.add(constraint.type)
+                        # Check if constraint is invalid
+                        if not constraint.is_valid:
+                            available_types.add('INVALID')
     
     return available_types
 
@@ -265,14 +279,22 @@ CONSTRAINT_ICONS = {
     'CAMERA_SOLVER': 'CON_CAMERASOLVER',
     'FOLLOW_TRACK': 'CON_FOLLOWTRACK',
     'OBJECT_SOLVER': 'CON_OBJECTSOLVER',
+    'INVALID': 'UNLINKED',
 }
 
 def get_constraint_icon(constraint_type):
     """Get constraint type icon"""
     return CONSTRAINT_ICONS.get(constraint_type, 'CONSTRAINT')
 
+
+def set_constraint_default_space(constraint):
+    """Set constraint default space to Local Space if supported"""
+    if hasattr(constraint, 'target_space') and hasattr(constraint, 'owner_space'):
+        constraint.target_space = 'LOCAL'
+        constraint.owner_space = 'LOCAL'
+
 class ANIM_OT_batch_imitate(Operator):
-    """Batch create constraints for selected armatures targeting bones with same name in active armature"""
+    """Batch create constraints for selected armatures targeting bones with same name in active armature/mesh"""
     bl_idname = "anim.batch_imitate"
     bl_label = "Batch Imitate"
     bl_options = {'REGISTER', 'UNDO'}
@@ -285,6 +307,10 @@ class ANIM_OT_batch_imitate(Operator):
     
     @classmethod
     def poll(cls, context):
+        if context.mode == 'POSE':
+            # Imitate function should be disabled in Pose mode
+            return False
+            
         if not context.selected_objects:
             return False
         active_obj = context.active_object
@@ -322,13 +348,15 @@ class ANIM_OT_batch_imitate(Operator):
                     constraint = target_bone.constraints.new(type=self.constraint_type)
                     constraint.target = active_obj
                     constraint.subtarget = target_bone.name
+                    # Set default space to Local Space
+                    set_constraint_default_space(constraint)
                     total_added += 1
         
         self.report({'INFO'}, f"Added {total_added} imitate constraints")
         return {'FINISHED'}
 
 class ANIM_OT_remove_imitate(Operator):
-    """Batch remove constraints from selected armatures targeting bones with same name in active armature"""
+    """Batch remove constraints from selected armatures targeting bones with same name in active armature/mesh"""
     bl_idname = "anim.remove_imitate"
     bl_label = "Remove Imitate Constraints"
     bl_options = {'REGISTER', 'UNDO'}
@@ -341,6 +369,10 @@ class ANIM_OT_remove_imitate(Operator):
     
     @classmethod
     def poll(cls, context):
+        if context.mode == 'POSE':
+            # Remove Imitate function should be disabled in Pose mode
+            return False
+            
         if not context.selected_objects:
             return False
         active_obj = context.active_object
@@ -374,7 +406,7 @@ class ANIM_OT_remove_imitate(Operator):
         return {'FINISHED'}
 
 class ANIM_OT_batch_copy(Operator):
-    """Copy constraints from bones with same name in active armature to selected armatures"""
+    """Copy constraints from active armature's bones to selected armatures' bones with same name"""
     bl_idname = "anim.batch_copy"
     bl_label = "Batch Copy Constraints"
     bl_options = {'REGISTER', 'UNDO'}
@@ -387,6 +419,10 @@ class ANIM_OT_batch_copy(Operator):
     
     @classmethod
     def poll(cls, context):
+        if context.mode == 'POSE':
+            # Copy function should be disabled in Pose mode
+            return False
+            
         active_obj = context.active_object
         if not active_obj or active_obj.type != 'ARMATURE':
             cls.poll_message_set("Active object must be an armature")
@@ -466,7 +502,7 @@ class ANIM_OT_batch_copy(Operator):
         return {'FINISHED'}
 
 class ANIM_OT_remove_copy(Operator):
-    """Remove constraints from selected armatures that match constraints on bones with same name in active armature"""
+    """Remove constraints from selected armatures that match active armature's constraints"""
     bl_idname = "anim.remove_copy"
     bl_label = "Remove Copied Constraints"
     bl_options = {'REGISTER', 'UNDO'}
@@ -479,6 +515,10 @@ class ANIM_OT_remove_copy(Operator):
     
     @classmethod
     def poll(cls, context):
+        if context.mode == 'POSE':
+            # Remove Copy function should be disabled in Pose mode
+            return False
+            
         active_obj = context.active_object
         if not active_obj or active_obj.type != 'ARMATURE':
             cls.poll_message_set("Active object must be an armature")
@@ -555,7 +595,7 @@ class ANIM_OT_remove_copy(Operator):
         return {'FINISHED'}
 
 class ANIM_OT_batch_new(Operator):
-    """Create new constraints for all bones in selected armatures"""
+    """Create new constraints for selected bones/armatures"""
     bl_idname = "anim.batch_new"
     bl_label = "Batch New Constraints"
     bl_options = {'REGISTER', 'UNDO'}
@@ -568,27 +608,54 @@ class ANIM_OT_batch_new(Operator):
     
     @classmethod
     def poll(cls, context):
-        selected_armatures = [obj for obj in context.selected_objects 
-                            if obj.type == 'ARMATURE']
-        return len(selected_armatures) >= 1
+        if context.mode == 'OBJECT':
+            selected_armatures = [obj for obj in context.selected_objects 
+                                if obj.type == 'ARMATURE']
+            if not selected_armatures:
+                cls.poll_message_set("Select at least one armature")
+                return False
+            return True
+        elif context.mode == 'POSE':
+            # In pose mode, check if active object is armature and there are selected bones
+            if not context.active_object or context.active_object.type != 'ARMATURE':
+                cls.poll_message_set("Active object must be an armature")
+                return False
+            if len(context.selected_pose_bones) < 1:
+                cls.poll_message_set("Select at least one bone")
+                return False
+            return True
+        return False
     
     def execute(self, context):
-        selected_armatures = [obj for obj in context.selected_objects 
-                            if obj.type == 'ARMATURE']
-        
         total_added = 0
         
-        for armature in selected_armatures:
-            for bone in armature.pose.bones:
-                # Use Blender's built-in method to create constraints
-                bone.constraints.new(type=self.constraint_type)
-                total_added += 1
+        if context.mode == 'OBJECT':
+            selected_armatures = [obj for obj in context.selected_objects 
+                                if obj.type == 'ARMATURE']
+            
+            for armature in selected_armatures:
+                for bone in armature.pose.bones:
+                    # Use Blender's built-in method to create constraints
+                    constraint = bone.constraints.new(type=self.constraint_type)
+                    # Set default space to Local Space
+                    set_constraint_default_space(constraint)
+                    total_added += 1
+        elif context.mode == 'POSE':
+            # In pose mode, only process selected bones in active armature
+            active_armature = context.active_object
+            if active_armature and active_armature.type == 'ARMATURE':
+                for bone in context.selected_pose_bones:
+                    # Use Blender's built-in method to create constraints
+                    constraint = bone.constraints.new(type=self.constraint_type)
+                    # Set default space to Local Space
+                    set_constraint_default_space(constraint)
+                    total_added += 1
         
         self.report({'INFO'}, f"Added {total_added} new constraints")
         return {'FINISHED'}
 
 class ANIM_OT_batch_delete(Operator):
-    """Delete constraints by type from all bones in selected armatures"""
+    """Delete constraints by type from selected bones/armatures"""
     bl_idname = "anim.batch_delete"
     bl_label = "Batch Delete Constraints"
     bl_options = {'REGISTER', 'UNDO'}
@@ -601,23 +668,58 @@ class ANIM_OT_batch_delete(Operator):
     
     @classmethod
     def poll(cls, context):
-        selected_armatures = [obj for obj in context.selected_objects 
-                            if obj.type == 'ARMATURE']
-        return len(selected_armatures) >= 1
+        if context.mode == 'OBJECT':
+            selected_armatures = [obj for obj in context.selected_objects 
+                                if obj.type == 'ARMATURE']
+            if not selected_armatures:
+                cls.poll_message_set("Select at least one armature")
+                return False
+            return True
+        elif context.mode == 'POSE':
+            # In pose mode, check if active object is armature and there are selected bones
+            if not context.active_object or context.active_object.type != 'ARMATURE':
+                cls.poll_message_set("Active object must be an armature")
+                return False
+            if len(context.selected_pose_bones) < 1:
+                cls.poll_message_set("Select at least one bone")
+                return False
+            return True
+        return False
     
     def execute(self, context):
-        selected_armatures = [obj for obj in context.selected_objects 
-                            if obj.type == 'ARMATURE']
-        
         total_removed = 0
         
-        for armature in selected_armatures:
-            for bone in armature.pose.bones:
-                for constraint in list(bone.constraints):
-                    if (self.constraint_type == 'ALL' or 
-                        constraint.type == self.constraint_type):
-                        bone.constraints.remove(constraint)
-                        total_removed += 1
+        if context.mode == 'OBJECT':
+            selected_armatures = [obj for obj in context.selected_objects 
+                                if obj.type == 'ARMATURE']
+            
+            for armature in selected_armatures:
+                for bone in armature.pose.bones:
+                    for constraint in list(bone.constraints):
+                        # Handle invalid constraints
+                        if self.constraint_type == 'INVALID':
+                            if not constraint.is_valid:
+                                bone.constraints.remove(constraint)
+                                total_removed += 1
+                        elif (self.constraint_type == 'ALL' or 
+                              constraint.type == self.constraint_type):
+                            bone.constraints.remove(constraint)
+                            total_removed += 1
+        elif context.mode == 'POSE':
+            # In pose mode, only process selected bones in active armature
+            active_armature = context.active_object
+            if active_armature and active_armature.type == 'ARMATURE':
+                for bone in context.selected_pose_bones:
+                    for constraint in list(bone.constraints):
+                        # Handle invalid constraints
+                        if self.constraint_type == 'INVALID':
+                            if not constraint.is_valid:
+                                bone.constraints.remove(constraint)
+                                total_removed += 1
+                        elif (self.constraint_type == 'ALL' or 
+                              constraint.type == self.constraint_type):
+                            bone.constraints.remove(constraint)
+                            total_removed += 1
         
         type_name = "All" if self.constraint_type == 'ALL' else self.constraint_type
         self.report({'INFO'}, f"Removed {total_removed} {type_name} constraints")
@@ -630,23 +732,32 @@ class VIEW3D_MT_batch_constraints_menu(Menu):
     
     @classmethod
     def poll(cls, context):
-        # Check if it is in object mode
-        if context.mode != 'OBJECT':
-            return False
         # Check if active object or selected objects include armatures
-        if context.active_object and context.active_object.type == 'ARMATURE':
-            return True
-        # Check if selected objects include armatures
-        selected_armatures = [obj for obj in context.selected_objects 
-                            if obj.type == 'ARMATURE']
-        return len(selected_armatures) >= 1
+        if context.mode == 'OBJECT':
+            if context.active_object and context.active_object.type == 'ARMATURE':
+                return True
+            # Check if selected objects include armatures
+            selected_armatures = [obj for obj in context.selected_objects 
+                                if obj.type == 'ARMATURE']
+            return len(selected_armatures) >= 1
+        elif context.mode == 'POSE':
+            # In pose mode, check if active object is armature
+            if context.active_object and context.active_object.type == 'ARMATURE':
+                return True
+            return False
+        return False
     
     def draw(self, context):
         layout = self.layout
-        layout.menu("VIEW3D_MT_imitate_menu", icon='CONSTRAINT_BONE')
-        layout.menu("VIEW3D_MT_remove_imitate_menu", icon='REMOVE')
-        layout.menu("VIEW3D_MT_copy_menu", icon='DUPLICATE')
-        layout.menu("VIEW3D_MT_remove_copy_menu", icon='REMOVE')
+        
+        if context.mode == 'OBJECT':
+            # In object mode, show all options
+            layout.menu("VIEW3D_MT_imitate_menu", icon='CONSTRAINT_BONE')
+            layout.menu("VIEW3D_MT_remove_imitate_menu", icon='REMOVE')
+            layout.menu("VIEW3D_MT_copy_menu", icon='DUPLICATE')
+            layout.menu("VIEW3D_MT_remove_copy_menu", icon='REMOVE')
+        
+        # Show new and delete options in both modes
         layout.menu("VIEW3D_MT_new_menu", icon='ADD')
         layout.menu("VIEW3D_MT_delete_menu", icon='TRASH')
 
@@ -776,15 +887,25 @@ class VIEW3D_MT_delete_menu(Menu):
         
         for constraint_type in ALL_CONSTRAINTS:
             if constraint_type[0] in available_types:
-                icon = get_constraint_icon(constraint_type[0])
-                op = layout.operator("anim.batch_delete", text=constraint_type[1], icon=icon)
-                op.constraint_type = constraint_type[0]
+                if constraint_type[0] == 'INVALID':
+                    # Use UNLINKED icon for invalid constraints
+                    op = layout.operator("anim.batch_delete", text=constraint_type[1], icon='UNLINKED')
+                    op.constraint_type = constraint_type[0]
+                else:
+                    icon = get_constraint_icon(constraint_type[0])
+                    op = layout.operator("anim.batch_delete", text=constraint_type[1], icon=icon)
+                    op.constraint_type = constraint_type[0]
 
 def menu_func(self, context):
     # Only show menu when active or selected objects include armatures
-    if context.mode == 'OBJECT' and (context.active_object and context.active_object.type == 'ARMATURE') or \
-       any(obj.type == 'ARMATURE' for obj in context.selected_objects):
-        self.layout.menu("VIEW3D_MT_batch_constraints_menu")
+    if context.mode == 'OBJECT':
+        if (context.active_object and context.active_object.type == 'ARMATURE') or \
+           any(obj.type == 'ARMATURE' for obj in context.selected_objects):
+            self.layout.menu("VIEW3D_MT_batch_constraints_menu")
+    elif context.mode == 'POSE':
+        # In pose mode, check if active object is armature
+        if context.active_object and context.active_object.type == 'ARMATURE':
+            self.layout.menu("VIEW3D_MT_batch_constraints_menu")
 
 classes = (
     ANIM_OT_batch_imitate,
@@ -808,9 +929,18 @@ def register():
     bpy.types.VIEW3D_MT_editor_menus.append(menu_func)
 
 def unregister():
-    bpy.types.VIEW3D_MT_editor_menus.remove(menu_func)
+    # Remove menu first
+    try:
+        bpy.types.VIEW3D_MT_editor_menus.remove(menu_func)
+    except ValueError:
+        pass  # Menu might not be registered
+    
+    # Unregister classes in reversed order with error handling
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            pass  # Class might not be registered
 
 if __name__ == "__main__":
     register()
