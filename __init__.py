@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Batch Bone Constraints",
     "author": "distinctive-mark",
-    "version": (1, 1, 3),
+    "version": (1, 1, 4),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Header > Batch Bone Constraints",
     "description": "Batch bone constraints to the selected multiple armatures",
@@ -60,7 +60,6 @@ ALL_CONSTRAINTS = [
     ('CAMERA_SOLVER', _("Camera Solver"), ""),
     ('FOLLOW_TRACK', _("Follow Track"), ""),
     ('OBJECT_SOLVER', _("Object Solver"), ""),
-    ('INVALID', _("Invalid"), ""),
 ]
 
 
@@ -413,7 +412,7 @@ class ANIM_OT_batch_copy(Operator):
     
     constraint_type: EnumProperty(
         name="Constraint Type",
-        items=[('ALL', "All", "")] + ALL_CONSTRAINTS,
+        items=[('ALL', "All", "")] + ALL_CONSTRAINTS + [('INVALID', _("Invalid"), "")],
         default='ALL'
     )
     
@@ -509,7 +508,7 @@ class ANIM_OT_remove_copy(Operator):
     
     constraint_type: EnumProperty(
         name="Constraint Type",
-        items=[('ALL', "All", "")] + ALL_CONSTRAINTS,
+        items=[('ALL', "All", "")] + ALL_CONSTRAINTS + [('INVALID', _("Invalid"), "")],
         default='ALL'
     )
     
@@ -662,7 +661,7 @@ class ANIM_OT_batch_delete(Operator):
     
     constraint_type: EnumProperty(
         name="Constraint Type",
-        items=[('ALL', "All", "")] + ALL_CONSTRAINTS,
+        items=[('ALL', "All", "")] + ALL_CONSTRAINTS + [('INVALID', "Invalid", "")],
         default='ALL'
     )
     
@@ -885,16 +884,17 @@ class VIEW3D_MT_delete_menu(Menu):
             op.constraint_type = 'ALL'
             layout.separator()
         
+        # First handle INVALID constraint type separately
+        if 'INVALID' in available_types:
+            op = layout.operator("anim.batch_delete", text="Invalid", icon='UNLINKED')
+            op.constraint_type = 'INVALID'
+            
+        # Then handle all other constraint types from ALL_CONSTRAINTS
         for constraint_type in ALL_CONSTRAINTS:
             if constraint_type[0] in available_types:
-                if constraint_type[0] == 'INVALID':
-                    # Use UNLINKED icon for invalid constraints
-                    op = layout.operator("anim.batch_delete", text=constraint_type[1], icon='UNLINKED')
-                    op.constraint_type = constraint_type[0]
-                else:
-                    icon = get_constraint_icon(constraint_type[0])
-                    op = layout.operator("anim.batch_delete", text=constraint_type[1], icon=icon)
-                    op.constraint_type = constraint_type[0]
+                icon = get_constraint_icon(constraint_type[0])
+                op = layout.operator("anim.batch_delete", text=constraint_type[1], icon=icon)
+                op.constraint_type = constraint_type[0]
 
 def menu_func(self, context):
     # Only show menu when active or selected objects include armatures
